@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "sendsmtp"
+version = "1.0.0"
+description = "CLI SMTP client in pure Python"
+authors = ["Ivan Fedorov <inbox@titaniumhocker.ru>"]
+license = "MIT License"
+readme = "README.rst"
+homepage = "https://github.com/TitaniumHocker/sendsmtp"
+keywords = [
+    "smtp", "cli"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Communications :: Email",
+    "Topic :: Communications :: Email :: Email Clients (MUA)"
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/TitaniumHocker/sendsmtp/issues"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+sendsmtp = "sendsmtp.__main__:main"
