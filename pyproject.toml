@@ -60,4 +60,4 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=sendsmtp --cov-report=term-missing --cov-fail-under=85"
+addopts = "--cov=sendsmtp --cov-report=term-missing --cov-fail-under=90"
