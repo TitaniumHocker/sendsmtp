@@ -2,13 +2,15 @@
 
 import io
 import sys
+from email import message_from_bytes
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from conftest import AUTH_PASSWORD, AUTH_USER, ServerStarter
 
 from sendsmtp.__main__ import main
-from sendsmtp.sender import Security
+from sendsmtp.sender import Security, Sender
 
 
 def run_main(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> None:
@@ -60,6 +62,27 @@ class TestMainMessageSources:
         )
         main()
         assert len(server.handler.messages) == 1
+
+    def test_stdin_interactive_eof(
+        self, monkeypatch: pytest.MonkeyPatch, smtp_server_factory: ServerStarter
+    ) -> None:
+        """No piped stdin: message typed interactively until an EOF line."""
+        server = smtp_server_factory()
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["sendsmtp", "127.0.0.1", "-p", str(server.port), "a@b.c", "x@y.z"],
+        )
+        monkeypatch.setattr(sys, "stdin", io.StringIO("typed line\neof\nnever sent"))
+        monkeypatch.setattr("sendsmtp.__main__.select", lambda *_: ([], [], []))
+        main()
+        assert len(server.handler.messages) == 1
+        raw = server.handler.messages[0].content
+        assert isinstance(raw, bytes)
+        payload = message_from_bytes(raw).get_payload(decode=True)
+        assert isinstance(payload, bytes)
+        assert b"typed line" in payload
+        assert b"never sent" not in payload
 
 
 class TestMainSubject:
@@ -156,6 +179,28 @@ class TestMainAuth:
         )
         assert len(server.handler.messages) == 1
 
+    def test_auth_prompts_for_password(
+        self, monkeypatch: pytest.MonkeyPatch, smtp_server_factory: ServerStarter
+    ) -> None:
+        """-u without --password: getpass() supplies the password."""
+        server = smtp_server_factory(auth=True)
+        monkeypatch.setattr("sendsmtp.__main__.getpass", lambda _: AUTH_PASSWORD)
+        run_main(
+            monkeypatch,
+            [
+                "127.0.0.1",
+                "-p",
+                str(server.port),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "b",
+                "-u",
+                AUTH_USER,
+            ],
+        )
+        assert len(server.handler.messages) == 1
+
 
 class TestMainRecipients:
     def test_comma_separated_to(
@@ -189,3 +234,42 @@ class TestMainRecipients:
             ],
         )
         assert server.handler.messages[0].rcpt_tos == ["x@y.z", "c@d.e", "f@g.h"]
+
+
+class TestMainGuard:
+    def test_python_dash_m_invocation(
+        self, monkeypatch: pytest.MonkeyPatch, smtp_server_factory: ServerStarter
+    ) -> None:
+        """python -m sendsmtp: the __main__ guard runs main() end-to-end."""
+        import runpy
+
+        server = smtp_server_factory()
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sendsmtp",
+                "127.0.0.1",
+                "-p",
+                str(server.port),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "via runpy",
+            ],
+        )
+        with pytest.raises(SystemExit) as exc:
+            runpy.run_module("sendsmtp.__main__", run_name="__main__")
+        assert exc.value.code == 0
+        assert len(server.handler.messages) == 1
+
+
+class TestSenderStringRecipients:
+    def test_cc_and_bcc_as_single_strings(self) -> None:
+        """cc/bcc accept a lone address string, not only sequences."""
+        sender = Sender("h")
+        smtp = MagicMock()
+        sender.smtp = smtp
+        sender.send("a@b.c", "x@y.z", "body", cc="c@d.e", bcc="f@g.h")
+        recipients = smtp.sendmail.call_args[0][1]
+        assert recipients == ["x@y.z", "c@d.e", "f@g.h"]
