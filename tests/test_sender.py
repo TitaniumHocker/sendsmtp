@@ -44,6 +44,10 @@ class TestMessageAssembly:
         assert "To: x@y.z" in raw
         assert "Subject: subj" in raw
 
+    def test_x_mailer_header(self) -> None:
+        _, raw = self._sent()
+        assert "X-Mailer: sendsmtp" in raw
+
     def test_to_string_joined(self) -> None:
         _, raw = self._sent(to=["x@y.z", "w@v.u"])
         assert "To: x@y.z,w@v.u" in raw
