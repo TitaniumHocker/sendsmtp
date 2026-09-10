@@ -61,7 +61,7 @@ def run(args: Namespace) -> int:
     else:
         security = Security.PLAIN
 
-    with Sender(args.host, args.port, security) as sender:
+    with Sender(args.host, args.port, security, args.allow_untrusted) as sender:
         if args.verbose:
             sender.smtp.set_debuglevel(1)
             print(
