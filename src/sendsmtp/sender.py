@@ -88,7 +88,6 @@ class Sender:
         :param username: Login username.
         :param password: Login password.
         :returns: Server reply.
-        :raises SMTPNotSupportedError: If the server does not support AUTH.
         """
         return self.smtp.login(username, password)
 
