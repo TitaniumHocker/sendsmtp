@@ -22,7 +22,8 @@ def body_of(envelope: Envelope) -> str:
     assert isinstance(envelope.content, bytes)
     payload = message_from_bytes(envelope.content).get_payload(decode=True)
     assert isinstance(payload, bytes)
-    return payload.decode()
+    # MIME text parts end with a newline; compare the body without it.
+    return payload.decode().rstrip("\r\n")
 
 
 class TestPlainE2E:

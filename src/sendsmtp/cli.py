@@ -89,6 +89,14 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
+    "-a",
+    "--attach",
+    metavar="PATH",
+    action="append",
+    help="Path to file to attach; repeat to attach several files.",
+    required=False,
+)
+parser.add_argument(
     "-v",
     "--verbose",
     help="Print the SMTP dialog and full stacktrace on error.",
