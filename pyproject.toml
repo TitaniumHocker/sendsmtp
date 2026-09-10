@@ -49,7 +49,15 @@ check-return-types = false
 
 [dependency-groups]
 dev = [
+    "aiosmtpd>=1.4.6",
     "mypy>=2.3.1",
     "pydoclint>=0.9.1",
+    "pytest-cov>=7.0.1",
+    "pytest>=8.4.2",
     "ruff>=0.16.6",
+    "trustme>=1.2",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=sendsmtp --cov-report=term-missing --cov-fail-under=90"
