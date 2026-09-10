@@ -7,17 +7,17 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from conftest import AUTH_PASSWORD, AUTH_USER, ServerStarter
+from conftest import AUTH_PASSWORD, AUTH_USER, ServerStarter, free_port
 
 from sendsmtp.__main__ import main
 from sendsmtp.sender import Security, Sender
 
 
-def run_main(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> None:
+def run_main(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> int:
     """Run main() with a patched argv and empty stdin."""
     monkeypatch.setattr(sys, "argv", ["sendsmtp", *argv])
     monkeypatch.setattr(sys, "stdin", io.StringIO(""))
-    main()
+    return main()
 
 
 class TestMainMessageSources:
@@ -178,10 +178,11 @@ class TestMainAuth:
                 AUTH_USER,
                 "--password",
                 AUTH_PASSWORD,
+                "-v",
             ],
         )
         assert len(server.handler.messages) == 1
-        assert "Authenticated, reply:" in capsys.readouterr().out
+        assert "Authenticated, reply:" in capsys.readouterr().err
 
     def test_auth_prompts_for_password(
         self, monkeypatch: pytest.MonkeyPatch, smtp_server_factory: ServerStarter
@@ -277,3 +278,123 @@ class TestSenderStringRecipients:
         sender.send("a@b.c", "x@y.z", "body", cc="c@d.e", bcc="f@g.h")
         recipients = smtp.sendmail.call_args[0][1]
         assert recipients == ["x@y.z", "c@d.e", "f@g.h"]
+
+
+class TestMainOutput:
+    def test_success_message_is_short(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        smtp_server_factory: ServerStarter,
+    ) -> None:
+        server = smtp_server_factory()
+        code = run_main(
+            monkeypatch,
+            [
+                "127.0.0.1",
+                "-p",
+                str(server.port),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "b",
+                "-c",
+                "c@d.e",
+            ],
+        )
+        assert code == 0
+        assert capsys.readouterr().out.strip() == "Message successfully sent."
+
+    def test_refused_recipient_reported_and_nonzero(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        smtp_server_factory: ServerStarter,
+    ) -> None:
+        server = smtp_server_factory()
+        monkeypatch.setattr(
+            Sender, "send", lambda *_, **__: {"w@v.u": (550, b"No such user")}
+        )
+        code = run_main(
+            monkeypatch,
+            ["127.0.0.1", "-p", str(server.port), "a@b.c", "x@y.z,w@v.u", "-m", "b"],
+        )
+        out = capsys.readouterr()
+        assert code == 1
+        assert "w@v.u: 550 No such user" in out.err
+        assert out.out.strip() == "Message successfully sent."
+
+    def test_verbose_prints_connection_and_dialog(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        smtp_server_factory: ServerStarter,
+    ) -> None:
+        server = smtp_server_factory()
+        code = run_main(
+            monkeypatch,
+            [
+                "127.0.0.1",
+                "-p",
+                str(server.port),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "b",
+                "-c",
+                "c@d.e",
+                "-v",
+            ],
+        )
+        out = capsys.readouterr()
+        assert code == 0
+        assert f"Connected to 127.0.0.1:{server.port} (plain)." in out.err
+        assert out.out.strip() == "Message successfully sent to x@y.z, c@d.e"
+
+
+class TestMainErrors:
+    def test_error_is_short_by_default(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Nothing listening: one-line error, no stacktrace, exit code 1."""
+        code = run_main(
+            monkeypatch,
+            ["127.0.0.1", "-p", str(free_port()), "a@b.c", "x@y.z", "-m", "b"],
+        )
+        err = capsys.readouterr().err
+        assert code == 1
+        assert err.startswith("Error: ConnectionRefusedError:")
+        assert "Traceback" not in err
+
+    def test_verbose_propagates_exception(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        with pytest.raises(ConnectionRefusedError):
+            run_main(
+                monkeypatch,
+                [
+                    "127.0.0.1",
+                    "-p",
+                    str(free_port()),
+                    "a@b.c",
+                    "x@y.z",
+                    "-m",
+                    "b",
+                    "-v",
+                ],
+            )
+
+    def test_keyboard_interrupt(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        def boom(_: Any) -> int:
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr("sendsmtp.__main__.run", boom)
+        code = run_main(monkeypatch, ["127.0.0.1", "a@b.c", "x@y.z", "-m", "b"])
+        assert code == 130
+        assert capsys.readouterr().err.strip() == "Aborted."

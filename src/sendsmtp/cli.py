@@ -88,3 +88,10 @@ parser.add_argument(
     help="Message subject.",
     required=False,
 )
+parser.add_argument(
+    "-v",
+    "--verbose",
+    help="Print the SMTP dialog and full stacktrace on error.",
+    action="store_true",
+    required=False,
+)
