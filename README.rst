@@ -3,8 +3,8 @@ sendsmtp
 ########
 
 CLI SMTP client in pure Python. No dependencies, one command, plain-text
-mail: it builds a UTF-8 ``text/plain`` message and hands it to an SMTP
-server.
+mail: it builds a UTF-8 ``text/plain`` message — ``multipart/mixed`` once
+files are attached — and hands it to an SMTP server.
 
 Installation
 ============
@@ -30,7 +30,7 @@ Synopsis
 
    sendsmtp [-h] [-m MESSAGE] [-i INPUT] [-p PORT] [-u USERNAME]
             [--password PASSWORD] [-t | --starttls] [-c CC] [-b BCC]
-            [-s SUBJECT] [-v]
+            [-s SUBJECT] [-a PATH] [-v]
             HOST FROM TO
 
 Arguments
@@ -189,6 +189,21 @@ but are not listed in any header.
 .. code:: console
 
    $ sendsmtp smtp.example.com me@example.com you@example.com -b "archive@example.com" -m "hi"
+
+``-a PATH``, ``--attach PATH``
+------------------------------
+
+Attach a file to the message. Repeat the option once per file; the message
+then becomes ``multipart/mixed`` with the body as its first part.
+
+.. code:: console
+
+   $ sendsmtp smtp.example.com me@example.com you@example.com \
+       -s "Nightly report" -m "See attached." -a report.pdf -a data.csv
+
+The content type is guessed from the file name, falling back to
+``application/octet-stream``. A missing path is reported before the SMTP
+connection is opened, so nothing is sent and no password is asked for.
 
 ``-v``, ``--verbose``
 ---------------------

@@ -5,6 +5,7 @@ import os
 import sys
 from argparse import Namespace
 from getpass import getpass
+from pathlib import Path
 from select import select
 
 from .cli import parser
@@ -17,6 +18,7 @@ def run(args: Namespace) -> int:
 
     :param args: Parsed CLI arguments.
     :returns: Process exit code.
+    :raises FileNotFoundError: If an attachment path does not exist.
     """
     # Parsing addresses.
     args.to = split_addresses(args.to) or []
@@ -47,6 +49,11 @@ def run(args: Namespace) -> int:
     else:
         subject, message = extract_subject(message)
 
+    attachments = [Path(path) for path in args.attach or []]
+    for path in attachments:
+        if not path.is_file():
+            raise FileNotFoundError(f"Attachment not found: {path}")
+
     if args.tls:
         security = Security.TLS
     elif args.starttls:
@@ -73,6 +80,7 @@ def run(args: Namespace) -> int:
             subject,
             args.cc,
             args.bcc,
+            attachments,
         )
 
     for address, (code, text) in refused.items():

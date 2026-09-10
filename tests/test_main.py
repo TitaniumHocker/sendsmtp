@@ -3,6 +3,7 @@
 import io
 import sys
 from email import message_from_bytes
+from email.policy import default as default_policy
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -398,3 +399,90 @@ class TestMainErrors:
         code = run_main(monkeypatch, ["127.0.0.1", "a@b.c", "x@y.z", "-m", "b"])
         assert code == 130
         assert capsys.readouterr().err.strip() == "Aborted."
+
+
+class TestMainAttachments:
+    def test_attach_flag_sends_file(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Any,
+        smtp_server_factory: ServerStarter,
+    ) -> None:
+        server = smtp_server_factory()
+        path = tmp_path / "report.txt"
+        path.write_text("attached text")
+        code = run_main(
+            monkeypatch,
+            [
+                "127.0.0.1",
+                "-p",
+                str(server.port),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "b",
+                "-a",
+                str(path),
+            ],
+        )
+        assert code == 0
+        parsed = message_from_bytes(
+            server.handler.messages[0].content, policy=default_policy
+        )
+        names = [part.get_filename() for part in parsed.iter_attachments()]
+        assert names == ["report.txt"]
+
+    def test_several_attachments(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Any,
+        smtp_server_factory: ServerStarter,
+    ) -> None:
+        server = smtp_server_factory()
+        first, second = tmp_path / "one.txt", tmp_path / "two.bin"
+        first.write_text("1")
+        second.write_bytes(b"2")
+        run_main(
+            monkeypatch,
+            [
+                "127.0.0.1",
+                "-p",
+                str(server.port),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "b",
+                "-a",
+                str(first),
+                "-a",
+                str(second),
+            ],
+        )
+        parsed = message_from_bytes(
+            server.handler.messages[0].content, policy=default_policy
+        )
+        names = [part.get_filename() for part in parsed.iter_attachments()]
+        assert names == ["one.txt", "two.bin"]
+
+    def test_missing_attachment_fails_before_connecting(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Bad path is reported without opening an SMTP connection."""
+        code = run_main(
+            monkeypatch,
+            [
+                "127.0.0.1",
+                "-p",
+                str(free_port()),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "b",
+                "-a",
+                "/no/such/file.txt",
+            ],
+        )
+        assert code == 1
+        assert "Attachment not found: /no/such/file.txt" in capsys.readouterr().err

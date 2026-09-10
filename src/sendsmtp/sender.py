@@ -1,8 +1,10 @@
 """SMTP sender client for plain-text email messages."""
 
 from collections.abc import Sequence
-from email.mime.text import MIMEText
+from email.message import EmailMessage
 from enum import StrEnum
+from mimetypes import guess_type
+from pathlib import Path
 from smtplib import SMTP, SMTP_SSL
 from socket import gethostname
 from types import TracebackType
@@ -99,6 +101,7 @@ class Sender:
         subject: str | None = None,
         cc: Sequence[str] | str | None = None,
         bcc: Sequence[str] | str | None = None,
+        attachments: Sequence[str | Path] | None = None,
     ) -> dict[str, tuple[int, bytes]]:
         """Send an email message via opened SMTP connection.
 
@@ -108,6 +111,7 @@ class Sender:
         :param subject: Optional subject; empty if omitted.
         :param cc: Optional carbon-copy address(es).
         :param bcc: Optional blind carbon-copy address(es).
+        :param attachments: Optional paths of files to attach.
         :returns: Refused recipients mapping from ``smtplib``.
         """
         recipients: list[str] = []
@@ -126,12 +130,28 @@ class Sender:
             else:
                 recipients += bcc
 
-        msg = MIMEText(message, "plain", "utf-8")
+        msg = EmailMessage()
         msg["X-Mailer"] = "sendsmtp"
         msg["From"] = from_
         msg["To"] = to if isinstance(to, str) else ",".join(to)
         if cc:
             msg["CC"] = cc if isinstance(cc, str) else ",".join(cc)
         msg["Subject"] = subject if subject else ""
+        msg.set_content(message)
+
+        for attachment in attachments or []:
+            path = Path(attachment)
+            ctype, encoding = guess_type(path.name)
+            # A content encoding (.gz, .bz2) makes the guessed type the type
+            # of the *decoded* payload, which is not what we are attaching.
+            maintype, _, subtype = (
+                ctype if ctype and not encoding else "application/octet-stream"
+            ).partition("/")
+            msg.add_attachment(
+                path.read_bytes(),
+                maintype=maintype,
+                subtype=subtype,
+                filename=path.name,
+            )
 
         return self.smtp.sendmail(from_, recipients, msg.as_string())
