@@ -127,6 +127,7 @@ class Sender:
                 recipients += bcc
 
         msg = MIMEText(message, "plain", "utf-8")
+        msg["X-Mailer"] = "sendsmtp"
         msg["From"] = from_
         msg["To"] = to if isinstance(to, str) else ",".join(to)
         if cc:
