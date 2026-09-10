@@ -2,41 +2,65 @@
 
 from collections.abc import Sequence
 from email.mime.text import MIMEText
-from smtplib import SMTP, SMTPNotSupportedError
+from enum import StrEnum
+from smtplib import SMTP, SMTP_SSL, SMTPNotSupportedError
 from socket import gethostname
 from types import TracebackType
+
+
+class Security(StrEnum):
+    """Connection security mode.
+
+    :ivar PLAIN: No transport security, plain SMTP (port 25).
+    :ivar STARTTLS: Plain connection upgraded via STARTTLS extension (port 587).
+    :ivar TLS: Implicit TLS from the first byte (port 465).
+    """
+
+    PLAIN = "plain"
+    STARTTLS = "starttls"
+    TLS = "tls"
 
 
 class Sender:
     """Context manager wrapping an :class:`smtplib.SMTP` connection.
 
     :param host: SMTP server hostname.
-    :param port: SMTP port; 587 when ``tls`` is used, 25 otherwise.
-    :param tls: Whether to switch the connection to TLS.
+    :param port: SMTP port; defaults to 465 for ``tls``, 587 for
+    ``starttls`` and 25 for ``plain``.
+    :param security: Connection security mode.
     """
 
     port: int
     smtp: SMTP
 
-    def __init__(self, host: str, port: int | None = None, tls: bool = False) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: int | None = None,
+        security: Security = Security.PLAIN,
+    ) -> None:
         self.host: str = host
+        self.security: Security = security
         if port is None:
-            if tls:
-                self.port = 587
-            else:
-                self.port = 25
+            self.port = {
+                Security.PLAIN: 25,
+                Security.STARTTLS: 587,
+                Security.TLS: 465,
+            }[security]
         else:
             self.port = port
-        self.tls: bool = tls
 
     def __enter__(self) -> "Sender":
         """Open the SMTP connection and greet the server.
 
         :returns: Itself, with the connection opened.
         """
-        self.smtp = SMTP(self.host, self.port, gethostname())
-        if self.tls:
-            self.smtp.starttls()
+        if self.security is Security.TLS:
+            self.smtp = SMTP_SSL(self.host, self.port, gethostname())
+        else:
+            self.smtp = SMTP(self.host, self.port, gethostname())
+            if self.security is Security.STARTTLS:
+                self.smtp.starttls()
         self.smtp.ehlo(gethostname())
         return self
 

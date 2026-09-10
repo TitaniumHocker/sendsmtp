@@ -7,7 +7,7 @@ from getpass import getpass
 from select import select
 
 from .cli import parser
-from .sender import Sender
+from .sender import Security, Sender
 
 
 def main() -> int:
@@ -52,7 +52,14 @@ def main() -> int:
     else:
         subject = None
 
-    with Sender(args.host, args.port, args.tls) as sender:
+    if args.tls:
+        security = Security.TLS
+    elif args.starttls:
+        security = Security.STARTTLS
+    else:
+        security = Security.PLAIN
+
+    with Sender(args.host, args.port, security) as sender:
         if args.username and args.password:
             sender.login(args.username, args.password)
         elif args.username and not args.password:

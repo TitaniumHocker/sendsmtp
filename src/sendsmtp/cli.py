@@ -53,10 +53,17 @@ parser.add_argument(
     help="Password for login.",
     required=False,
 )
-parser.add_argument(
+security = parser.add_mutually_exclusive_group()
+security.add_argument(
     "-t",
     "--tls",
-    help="Flag to use TLS.",
+    help="Flag to use implicit TLS (port 465).",
+    action="store_true",
+    required=False,
+)
+security.add_argument(
+    "--starttls",
+    help="Flag to use STARTTLS extension (port 587).",
     action="store_true",
     required=False,
 )
