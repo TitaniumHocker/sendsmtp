@@ -8,6 +8,7 @@ from select import select
 
 from .cli import parser
 from .sender import Security, Sender
+from .utils import extract_subject, split_addresses
 
 
 def main() -> int:
@@ -18,12 +19,9 @@ def main() -> int:
     args = parser.parse_args()
 
     # Parsing addresses.
-    if "," in args.to:
-        args.to = args.to.split(",")
-    if args.cc is not None and "," in args.cc:
-        args.cc = args.cc.split(",")
-    if args.bcc is not None and "," in args.bcc:
-        args.bcc = args.bcc.split(",")
+    args.to = split_addresses(args.to) or []
+    args.cc = split_addresses(args.cc)
+    args.bcc = split_addresses(args.bcc)
 
     # Getting message contents.
     if args.input is not None and os.path.isfile(args.input):
@@ -43,14 +41,11 @@ def main() -> int:
                 buff.append(line)
             message = str("".join(buff))
 
-    # Getting subject.
+    # Getting subject: -s wins over a leading "Subject:" line.
     if args.subject is not None:
         subject = args.subject
-    elif len(message) > 8 and message[:8].lower().startswith("subject:"):
-        subject, message = message.split("\n", 1)
-        subject = subject.split(":", 1)[1].strip()
     else:
-        subject = None
+        subject, message = extract_subject(message)
 
     if args.tls:
         security = Security.TLS
