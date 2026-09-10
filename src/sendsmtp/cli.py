@@ -1,3 +1,5 @@
+"""CLI argument parser for sendsmtp."""
+
 from argparse import ArgumentParser
 
 parser = ArgumentParser("sendsmtp", description="CLI SMTP client in pure Python")

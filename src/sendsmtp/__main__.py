@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """CLI entrypoint for sendsmtp package."""
+
 import os
 import sys
 from getpass import getpass
@@ -10,10 +11,14 @@ from .sender import Sender
 
 
 def main() -> int:
+    """Parse CLI arguments, read the message and send it via SMTP.
+
+    :returns: Process exit code.
+    """
     args = parser.parse_args()
 
     # Parsing addresses.
-    if args.to is not None and "," in args.to:
+    if "," in args.to:
         args.to = args.to.split(",")
     if args.cc is not None and "," in args.cc:
         args.cc = args.cc.split(",")
@@ -22,7 +27,7 @@ def main() -> int:
 
     # Getting message contents.
     if args.input is not None and os.path.isfile(args.input):
-        with open(args.input, "rt") as fh:
+        with open(args.input) as fh:
             message = fh.read()
     elif args.message is not None:
         message = args.message
@@ -43,7 +48,7 @@ def main() -> int:
         subject = args.subject
     elif len(message) > 8 and message[:8].lower().startswith("subject:"):
         subject, message = message.split("\n", 1)
-        subject = subject.split(":", 1)[2].strip()
+        subject = subject.split(":", 1)[1].strip()
     else:
         subject = None
 
