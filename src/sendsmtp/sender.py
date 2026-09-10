@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from email.mime.text import MIMEText
 from enum import StrEnum
-from smtplib import SMTP, SMTP_SSL, SMTPNotSupportedError
+from smtplib import SMTP, SMTP_SSL
 from socket import gethostname
 from types import TracebackType
 
@@ -82,24 +82,15 @@ class Sender:
         self,
         username: str,
         password: str,
-        suppress: bool = True,
-    ) -> tuple[int, bytes] | None:
+    ) -> tuple[int, bytes]:
         """Log in on the SMTP server.
 
         :param username: Login username.
         :param password: Login password.
-        :param suppress: Whether to suppress the error raised by servers
-            without AUTH support.
-        :returns: Server reply, or ``None`` when the error was suppressed.
-        :raises SMTPNotSupportedError: If the server does not support AUTH
-            and ``suppress`` is ``False``.
+        :returns: Server reply.
+        :raises SMTPNotSupportedError: If the server does not support AUTH.
         """
-        try:
-            return self.smtp.login(username, password)
-        except SMTPNotSupportedError:
-            if not suppress:
-                raise
-            return None
+        return self.smtp.login(username, password)
 
     def send(
         self,

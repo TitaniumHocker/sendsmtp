@@ -158,7 +158,10 @@ class TestMainSecurity:
 
 class TestMainAuth:
     def test_auth_with_password(
-        self, monkeypatch: pytest.MonkeyPatch, smtp_server_factory: ServerStarter
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        smtp_server_factory: ServerStarter,
     ) -> None:
         server = smtp_server_factory(auth=True)
         run_main(
@@ -178,6 +181,7 @@ class TestMainAuth:
             ],
         )
         assert len(server.handler.messages) == 1
+        assert "Authenticated, reply:" in capsys.readouterr().out
 
     def test_auth_prompts_for_password(
         self, monkeypatch: pytest.MonkeyPatch, smtp_server_factory: ServerStarter

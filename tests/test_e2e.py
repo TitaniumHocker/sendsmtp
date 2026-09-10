@@ -1,7 +1,7 @@
 """End-to-end tests: Sender against a live aiosmtpd server."""
 
 from email import message_from_bytes
-from smtplib import SMTPAuthenticationError
+from smtplib import SMTPAuthenticationError, SMTPNotSupportedError
 from typing import cast
 
 import pytest
@@ -71,12 +71,13 @@ class TestAuthE2E:
             with pytest.raises(SMTPAuthenticationError):
                 sender.login(AUTH_USER, "wrong")
 
-    def test_suppress_on_server_without_auth(
+    def test_raises_on_server_without_auth(
         self, smtp_server_factory: ServerStarter
     ) -> None:
         server = smtp_server_factory(Security.PLAIN, auth=False)
         with Sender("127.0.0.1", server.port, Security.PLAIN) as sender:
-            assert sender.login(AUTH_USER, AUTH_PASSWORD) is None
+            with pytest.raises(SMTPNotSupportedError):
+                sender.login(AUTH_USER, AUTH_PASSWORD)
 
 
 class TestStarttlsAuthE2E:

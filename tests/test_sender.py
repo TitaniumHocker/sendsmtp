@@ -1,4 +1,4 @@
-"""Unit tests for Sender: default ports, MIME assembly, login suppression."""
+"""Unit tests for Sender: default ports, MIME assembly, login."""
 
 from collections.abc import Sequence
 from smtplib import SMTPNotSupportedError
@@ -65,21 +65,17 @@ class TestMessageAssembly:
         assert "Subject: " in raw
 
 
-class TestLoginSuppress:
+class TestLogin:
     def _sender_with_login_raising(self, exc: Exception) -> Sender:
         sender = Sender("h")
         sender.smtp = MagicMock()
         sender.smtp.login.side_effect = exc
         return sender
 
-    def test_suppressed_when_server_lacks_auth(self) -> None:
-        sender = self._sender_with_login_raising(SMTPNotSupportedError())
-        assert sender.login("u", "p") is None
-
-    def test_reraises_when_not_suppressing(self) -> None:
+    def test_raises_when_server_lacks_auth(self) -> None:
         sender = self._sender_with_login_raising(SMTPNotSupportedError())
         with pytest.raises(SMTPNotSupportedError):
-            sender.login("u", "p", suppress=False)
+            sender.login("u", "p")
 
     def test_passes_credentials_through(self) -> None:
         sender = Sender("h")
