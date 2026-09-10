@@ -74,6 +74,14 @@ class TestMessageAssembly:
         _, raw = self._sent(subject="привет", message="тело")
         assert raw.isascii()
 
+    def test_body_is_plain_by_default(self) -> None:
+        _, raw = self._sent()
+        assert "Content-Type: text/plain" in raw
+
+    def test_html_body_typed_as_html(self) -> None:
+        _, raw = self._sent(message="<p>hi</p>", html=True)
+        assert "Content-Type: text/html" in raw
+
 
 class TestAttachments:
     def _sent(self, attachments: Sequence[Any]) -> str:

@@ -486,3 +486,31 @@ class TestMainAttachments:
         )
         assert code == 1
         assert "Attachment not found: /no/such/file.txt" in capsys.readouterr().err
+
+
+class TestMainHtml:
+    def test_html_flag_sends_html_body(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        smtp_server_factory: ServerStarter,
+    ) -> None:
+        server = smtp_server_factory()
+        code = run_main(
+            monkeypatch,
+            [
+                "127.0.0.1",
+                "-p",
+                str(server.port),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "<p>hi</p>",
+                "--html",
+            ],
+        )
+        assert code == 0
+        parsed = message_from_bytes(
+            server.handler.messages[0].content, policy=default_policy
+        )
+        assert parsed.get_content_type() == "text/html"
+        assert parsed.get_content().strip() == "<p>hi</p>"
