@@ -81,6 +81,7 @@ def run(args: Namespace) -> int:
             args.cc,
             args.bcc,
             attachments,
+            args.html,
         )
 
     for address, (code, text) in refused.items():

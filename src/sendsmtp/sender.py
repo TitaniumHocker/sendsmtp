@@ -1,4 +1,4 @@
-"""SMTP sender client for plain-text email messages."""
+"""SMTP sender client for plain-text and HTML email messages."""
 
 from collections.abc import Sequence
 from email.message import EmailMessage
@@ -102,6 +102,7 @@ class Sender:
         cc: Sequence[str] | str | None = None,
         bcc: Sequence[str] | str | None = None,
         attachments: Sequence[str | Path] | None = None,
+        html: bool = False,
     ) -> dict[str, tuple[int, bytes]]:
         """Send an email message via opened SMTP connection.
 
@@ -112,6 +113,7 @@ class Sender:
         :param cc: Optional carbon-copy address(es).
         :param bcc: Optional blind carbon-copy address(es).
         :param attachments: Optional paths of files to attach.
+        :param html: Send the body as ``text/html`` instead of ``text/plain``.
         :returns: Refused recipients mapping from ``smtplib``.
         """
         recipients: list[str] = []
@@ -137,7 +139,7 @@ class Sender:
         if cc:
             msg["CC"] = cc if isinstance(cc, str) else ",".join(cc)
         msg["Subject"] = subject if subject else ""
-        msg.set_content(message)
+        msg.set_content(message, subtype="html" if html else "plain")
 
         for attachment in attachments or []:
             path = Path(attachment)

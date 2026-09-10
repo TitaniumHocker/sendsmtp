@@ -2,9 +2,10 @@
 sendsmtp
 ########
 
-CLI SMTP client in pure Python. No dependencies, one command, plain-text
-mail: it builds a UTF-8 ``text/plain`` message — ``multipart/mixed`` once
-files are attached — and hands it to an SMTP server.
+CLI SMTP client in pure Python. No dependencies, one command: it builds a
+UTF-8 ``text/plain`` message — ``text/html`` with ``--html``,
+``multipart/mixed`` once files are attached — and hands it to an SMTP
+server.
 
 Installation
 ============
@@ -28,7 +29,7 @@ Synopsis
 
 .. code:: console
 
-   sendsmtp [-h] [-m MESSAGE] [-i INPUT] [-p PORT] [-u USERNAME]
+   sendsmtp [-h] [-m MESSAGE] [-i INPUT] [--html] [-p PORT] [-u USERNAME]
             [--password PASSWORD] [-t | --starttls] [-c CC] [-b BCC]
             [-s SUBJECT] [-a PATH] [-v]
             HOST FROM TO
@@ -102,6 +103,21 @@ containing only ``EOF``:
    Second line.
    EOF
    Message successfully sent.
+
+``--html``
+----------
+
+Send the body as ``text/html`` instead of ``text/plain``. The body itself
+is taken from ``--message``, ``--input`` or stdin as usual — the flag only
+changes the content type, nothing is escaped or wrapped.
+
+.. code:: console
+
+   $ sendsmtp smtp.example.com me@example.com you@example.com \
+       -s "Report" -i report.html --html
+
+No plain-text alternative part is generated: the message is a single
+``text/html`` part, so clients that refuse HTML show it as markup.
 
 ``-s SUBJECT``, ``--subject SUBJECT``
 -------------------------------------

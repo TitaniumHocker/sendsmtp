@@ -33,6 +33,12 @@ parser.add_argument(
     default=None,
 )
 parser.add_argument(
+    "--html",
+    help="Send the message body as HTML instead of plain text.",
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
     "-p",
     "--port",
     default=None,
