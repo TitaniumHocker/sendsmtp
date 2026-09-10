@@ -1,6 +1,6 @@
 [project]
 name = "sendsmtp"
-version = "1.0.0"
+version = "2.0.0"
 description = "CLI SMTP client in pure Python"
 authors = [{ name = "Ivan Fedorov", email = "inbox@titaniumhocker.ru" }]
 license = "MIT"

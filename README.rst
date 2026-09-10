@@ -15,7 +15,10 @@ Usage:
 .. code:: console
 
    $ sendsmtp --help
-    usage: sendsmtp [-h] [-m MESSAGE] [-i INPUT] [-p PORT] [-u USERNAME] [--password PASSWORD] [-t] [-c CC] [-b BCC] [-s SUBJECT] HOST FROM TO
+    usage: sendsmtp [-h] [-m MESSAGE] [-i INPUT] [-p PORT] [-u USERNAME]
+                    [--password PASSWORD] [-t | --starttls] [-c CC] [-b BCC]
+                    [-s SUBJECT]
+                    HOST FROM TO
 
     CLI SMTP client in pure Python
 
@@ -34,7 +37,8 @@ Usage:
       -u USERNAME, --username USERNAME
                             Username for login.
       --password PASSWORD   Password for login.
-      -t, --tls             Flag to use TLS.
+      -t, --tls             Flag to use implicit TLS (port 465).
+      --starttls            Flag to use STARTTLS extension (port 587).
       -c CC, --cc CC        Recipient address(es) to send copy to, comma separated.
       -b BCC, --bcc BCC     Recipient address(es) to send blind copy to, comma separated.
       -s SUBJECT, --subject SUBJECT
