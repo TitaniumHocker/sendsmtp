@@ -156,6 +156,32 @@ class TestMainSecurity:
         )
         assert len(server.handler.messages) == 1
 
+    def test_allow_untrusted_flag(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Any,
+        smtp_server_factory: ServerStarter,
+    ) -> None:
+        server = smtp_server_factory(Security.TLS)
+        empty = tmp_path / "no-ca.pem"
+        empty.write_text("")
+        monkeypatch.setenv("SSL_CERT_FILE", str(empty))
+        run_main(
+            monkeypatch,
+            [
+                "127.0.0.1",
+                "-p",
+                str(server.port),
+                "a@b.c",
+                "x@y.z",
+                "-m",
+                "b",
+                "-t",
+                "--allow-untrusted",
+            ],
+        )
+        assert len(server.handler.messages) == 1
+
 
 class TestMainAuth:
     def test_auth_with_password(

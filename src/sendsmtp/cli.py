@@ -74,6 +74,12 @@ security.add_argument(
     required=False,
 )
 parser.add_argument(
+    "--allow-untrusted",
+    help="Skip TLS certificate verification (insecure).",
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
     "-c",
     "--cc",
     default=None,

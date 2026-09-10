@@ -30,8 +30,8 @@ Synopsis
 .. code:: console
 
    sendsmtp [-h] [-m MESSAGE] [-i INPUT] [--html] [-p PORT] [-u USERNAME]
-            [--password PASSWORD] [-t | --starttls] [-c CC] [-b BCC]
-            [-s SUBJECT] [-a PATH] [-v]
+            [--password PASSWORD] [-t | --starttls] [--allow-untrusted]
+            [-c CC] [-b BCC] [-s SUBJECT] [-a PATH] [-v]
             HOST FROM TO
 
 Arguments
@@ -165,6 +165,19 @@ extension (port 587 by default). Mutually exclusive with ``--tls``.
 .. code:: console
 
    $ sendsmtp smtp.example.com me@example.com you@example.com --starttls -u me@example.com -m "hi"
+
+``--allow-untrusted``
+---------------------
+
+Skip TLS certificate verification: the server certificate is not checked
+against the trust store and its hostname is not matched. Only affects
+``--tls`` and ``--starttls``. Insecure — anyone on the path can
+impersonate the server — so use it only for servers with a self-signed
+certificate you cannot add to the system trust store.
+
+.. code:: console
+
+   $ sendsmtp smtp.internal me@example.com you@example.com --starttls --allow-untrusted -m "hi"
 
 ``-u USERNAME``, ``--username USERNAME``
 ----------------------------------------

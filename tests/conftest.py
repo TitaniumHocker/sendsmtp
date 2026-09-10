@@ -1,5 +1,6 @@
 """Shared fixtures: aiosmtpd server factory, TLS contexts, free ports."""
 
+import os
 import socket
 import ssl
 from collections.abc import Callable, Iterator
@@ -79,11 +80,29 @@ def free_port() -> int:
         return int(s.getsockname()[1])
 
 
-@pytest.fixture(scope="session")
-def server_ssl_context() -> Any:
-    """Session-scoped server SSL context from a trustme CA."""
+@pytest.fixture(scope="session", autouse=True)
+def trusted_ca(tmp_path_factory: pytest.TempPathFactory) -> Iterator[trustme.CA]:
+    """Session-scoped CA, trusted process-wide via ``SSL_CERT_FILE``.
+
+    ``ssl.create_default_context()`` reads that variable, so the client
+    side of every test trusts the server certificates issued below.
+    """
     ca = trustme.CA()
-    cert = ca.issue_cert("127.0.0.1", "localhost")
+    pem = tmp_path_factory.mktemp("ca") / "ca.pem"
+    ca.cert_pem.write_to_path(pem)
+    old = os.environ.get("SSL_CERT_FILE")
+    os.environ["SSL_CERT_FILE"] = str(pem)
+    yield ca
+    if old is None:
+        del os.environ["SSL_CERT_FILE"]
+    else:
+        os.environ["SSL_CERT_FILE"] = old
+
+
+@pytest.fixture(scope="session")
+def server_ssl_context(trusted_ca: trustme.CA) -> Any:
+    """Session-scoped server SSL context from the test CA."""
+    cert = trusted_ca.issue_cert("127.0.0.1", "localhost")
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     cert.configure_cert(ctx)
     return ctx

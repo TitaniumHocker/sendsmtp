@@ -7,6 +7,7 @@ from mimetypes import guess_type
 from pathlib import Path
 from smtplib import SMTP, SMTP_SSL
 from socket import gethostname
+from ssl import CERT_NONE, SSLContext, create_default_context
 from types import TracebackType
 
 
@@ -30,6 +31,7 @@ class Sender:
     :param port: SMTP port; defaults to 465 for ``tls``, 587 for
     ``starttls`` and 25 for ``plain``.
     :param security: Connection security mode.
+    :param allow_untrusted: Skip TLS certificate verification.
     """
 
     port: int
@@ -40,9 +42,11 @@ class Sender:
         host: str,
         port: int | None = None,
         security: Security = Security.PLAIN,
+        allow_untrusted: bool = False,
     ) -> None:
         self.host: str = host
         self.security: Security = security
+        self.allow_untrusted: bool = allow_untrusted
         if port is None:
             self.port = {
                 Security.PLAIN: 25,
@@ -57,12 +61,19 @@ class Sender:
 
         :returns: Itself, with the connection opened.
         """
+        context: SSLContext | None = None
+        if self.security is not Security.PLAIN:
+            # smtplib defaults to an unverified context, so build our own.
+            context = create_default_context()
+            if self.allow_untrusted:
+                context.check_hostname = False
+                context.verify_mode = CERT_NONE
         if self.security is Security.TLS:
-            self.smtp = SMTP_SSL(self.host, self.port, gethostname())
+            self.smtp = SMTP_SSL(self.host, self.port, gethostname(), context=context)
         else:
             self.smtp = SMTP(self.host, self.port, gethostname())
             if self.security is Security.STARTTLS:
-                self.smtp.starttls()
+                self.smtp.starttls(context=context)
         self.smtp.ehlo(gethostname())
         return self
 

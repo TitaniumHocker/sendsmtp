@@ -2,7 +2,8 @@
 
 from email import message_from_bytes
 from smtplib import SMTPAuthenticationError, SMTPNotSupportedError
-from typing import cast
+from ssl import SSLCertVerificationError
+from typing import Any, cast
 
 import pytest
 from aiosmtpd.smtp import Envelope
@@ -88,3 +89,48 @@ class TestStarttlsAuthE2E:
             sender.login(AUTH_USER, AUTH_PASSWORD)
             sender.send("a@b.c", "x@y.z", "authed tls body")
         assert body_of(received(server.handler)) == "authed tls body"
+
+
+class TestCertVerificationE2E:
+    @pytest.fixture
+    def untrusted(self, tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Make the test CA unknown to the client for this test."""
+        empty = tmp_path / "no-ca.pem"
+        empty.write_text("")
+        monkeypatch.setenv("SSL_CERT_FILE", str(empty))
+
+    def test_tls_rejects_unknown_ca(
+        self, smtp_server_factory: ServerStarter, untrusted: None
+    ) -> None:
+        server = smtp_server_factory(Security.TLS)
+        with pytest.raises(SSLCertVerificationError):
+            with Sender("127.0.0.1", server.port, Security.TLS):
+                pass
+
+    def test_starttls_rejects_unknown_ca(
+        self, smtp_server_factory: ServerStarter, untrusted: None
+    ) -> None:
+        server = smtp_server_factory(Security.STARTTLS)
+        with pytest.raises(SSLCertVerificationError):
+            with Sender("127.0.0.1", server.port, Security.STARTTLS):
+                pass
+
+    def test_tls_allow_untrusted_sends(
+        self, smtp_server_factory: ServerStarter, untrusted: None
+    ) -> None:
+        server = smtp_server_factory(Security.TLS)
+        with Sender(
+            "127.0.0.1", server.port, Security.TLS, allow_untrusted=True
+        ) as sender:
+            sender.send("a@b.c", "x@y.z", "untrusted body")
+        assert body_of(received(server.handler)) == "untrusted body"
+
+    def test_starttls_allow_untrusted_sends(
+        self, smtp_server_factory: ServerStarter, untrusted: None
+    ) -> None:
+        server = smtp_server_factory(Security.STARTTLS)
+        with Sender(
+            "127.0.0.1", server.port, Security.STARTTLS, allow_untrusted=True
+        ) as sender:
+            sender.send("a@b.c", "x@y.z", "untrusted body")
+        assert body_of(received(server.handler)) == "untrusted body"
