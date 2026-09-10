@@ -56,9 +56,12 @@ def main() -> int:
 
     with Sender(args.host, args.port, security) as sender:
         if args.username and args.password:
-            sender.login(args.username, args.password)
+            print("Authenticated, reply:", sender.login(args.username, args.password))
         elif args.username and not args.password:
-            sender.login(args.username, getpass(f"{args.username}'s passwd:"))
+            print(
+                "Authenticated, reply:",
+                sender.login(args.username, getpass(f"{args.username}'s passwd:")),
+            )
         reply = sender.send(
             args.from_,
             args.to,
